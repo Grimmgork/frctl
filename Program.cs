@@ -37,6 +37,7 @@ namespace frctl
                 offsetx = state.offsetx,
                 offsety = state.offsety
             };
+
             byte[,] image = Mandelbrot.Compute(fconfig);
             PrintImageToConsole(image, state.charmap);
         }
