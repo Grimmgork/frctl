@@ -6,54 +6,37 @@ using System.Configuration;
 using Newtonsoft.Json;
 using System.Reflection;
 using System.IO;
-using frctl.Commands;
+using System.Threading.Tasks;
 
 namespace frctl
 {
     class Program
-    { 
+    {
+        static AppState state;
         string[] parameterNames = new string[9] { "canvaswidth", "canvasheight", "zoom", "verticalzoomratio", "maxiterations", "maxdist", "offsetx", "offsety", "charmap" };
         string[] parameterNamesShortcut = new string[9] { "cw", "ch", "z", "vzr", "mi", "md", "ox", "oy", "cm" };
 
         static void Main(string[] args)
         {
             string configFilePath = Directory.GetParent(Assembly.GetEntryAssembly().Location).FullName + "/state.json";
-            AppState state = JsonConvert.DeserializeObject<AppState>(File.ReadAllText(configFilePath));//load state
-            //modify state
-            File.WriteAllText(configFilePath, JsonConvert.SerializeObject(state));//save state 
+            if(File.Exists(configFilePath))
+            {
+                state = JsonConvert.DeserializeObject<AppState>(File.ReadAllText(configFilePath));//load state
+                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(state));
+            }
+            else
+            {
+                state = new AppState();
+                File.WriteAllText(configFilePath, JsonConvert.SerializeObject(state));
+            }
 
-            PrintState(state);
-
-            //CliCommandBase cmd = new RootCommand();
-            //Console.WriteLine(cmd.Route(args));
-
-            Mandelbrot.Config fconfig = new Mandelbrot.Config() { 
-                canvaswidth = state.canvaswidth, 
-                canvasheight = state.canvasheight,
-                zoom = state.zoom,
-                verticalzoomratio = state.verticalzoomratio,
-                maxiterations = state.maxiterations,
-                maxdist = state.maxdist,
-                offsetx = state.offsetx,
-                offsety = state.offsety
-            };
-
-            byte[,] image = Mandelbrot.Compute(fconfig);
-            PrintImageToConsole(image, state.charmap);
-        }
-
-        private static void PrintState(AppState state)
-        {
-            
+            PrintImageToConsole(Mandelbrot.ComputeImage(state.fractalConfig), state.charmap);
         }
 
         private static void PrintImageToConsole(byte[,] image, string colorMap)
         {
-		    if (colorMap == String.Empty || colorMap == null)
+		    if(colorMap == String.Empty || colorMap == null)
 			    return;
-
-            Console.WriteLine(colorMap);
-            Console.WriteLine("".PadRight(colorMap.Length, '~'));
 
             for (int i = 0; i < image.GetLength(0); i++)
             {
@@ -85,17 +68,30 @@ namespace frctl
 
             bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
         }
-        
-        struct AppState
+       
+        [System.Serializable]
+        class AppState
         {
-            public int canvaswidth { get; init; }
-            public int canvasheight { get; init; }
-            public int maxiterations { get; init; }
-            public float zoom { get; init; }
-            public float verticalzoomratio { get; init; }
-            public float maxdist { get; init; }
-            public float offsetx { get; init; }
-            public float offsety { get; init; }
+            public AppState()
+            {
+                fractalConfig = new Mandelbrot.Config()
+                {
+                    canvaswidth = 64,
+                    canvasheight = 32,
+                    maxiterations = 280,
+                    zoom = 0.048f,
+                    verticalzoomratio = 2f,
+                    maxdist = 6f,
+                    offsetx = -8f,
+                    offsety = 0.9f
+                };
+
+                charmap = "  .'^\",:;Il!i><~+_-?\\,],[}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$";
+                exportpath = "c:/users/users/eric/desktop";
+                buffer = null;
+            }
+            
+            public Mandelbrot.Config fractalConfig { get; init; }
 
             public string charmap { get; init; }
             public string exportpath { get; init; }

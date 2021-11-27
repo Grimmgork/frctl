@@ -21,57 +21,55 @@ namespace frctl
             public float offsety { get; init; }
         }
 
-        public static byte[,] Compute(Config c)
+        public static byte[,] ComputeImage(Config c)
         {
             byte[,] image = new byte[c.canvasheight, c.canvaswidth];
+
             for (int i = 0; i < c.canvaswidth; i++)
             {
                 for (int j = 0; j < c.canvasheight; j++)
                 {
                     float x = (c.offsetx + i - c.canvaswidth / 2) * c.zoom;
                     float y = (c.offsety + j - c.canvasheight / 2) * c.zoom * c.verticalzoomratio;
-                    float startx = x;
-                    float starty = y;
 
-                    bool infinite = false;
-                    int count = 0;
-
-                    while (count < c.maxiterations)
-                    {
-                        if (x > c.maxdist || x < -c.maxdist)
-                        {
-                            infinite = true;
-                            break;
-                        }
-
-                        if (y > c.maxdist || y < -c.maxdist)
-                        {
-                            infinite = true;
-                            break;
-                        }
-
-                        float oldx = x;
-                        x = x * x - y * y;
-                        y = 2 * oldx * y;
-
-                        x += startx;
-                        y += starty;
-
-                        count++;
-                    }
-
-                    if (infinite)
-                    {
-                        float percent = (float)count / (float)c.maxiterations;
-                        byte res = (byte)(percent * 255);
-                        image[j, i] = res;
-                    }
-                    else
-                        image[j, i] = 255;
+                    image[j, i] = ComputeColor(x, y, c.maxiterations, c.maxdist);
                 }
             }
 
             return image;
         }
+
+        private static byte ComputeColor(float x, float y, int maxiterations, float maxdistance)
+        {
+            float startx = x;
+            float starty = y;
+
+            int count = 0;
+
+            while (count < maxiterations)
+            {
+                float oldx = x;
+                x = x * x - y * y;
+                y = 2 * oldx * y;
+
+                x += startx;
+                y += starty;
+
+                if (PointDistance(startx, starty, x, y) > maxdistance)
+                {
+                    float percent = (float)count / (float)maxiterations;
+                    return (byte)(percent * 255);
+                }
+
+                count++;
+            }
+            
+            return 255;
+        }
+
+        private static double PointDistance(float x1, float y1, float x2, float y2)
+        {
+            return Math.Sqrt((Math.Pow(x1 - y1, 2) + Math.Pow(x2 - y2, 2)));
+		}
     }
 }
